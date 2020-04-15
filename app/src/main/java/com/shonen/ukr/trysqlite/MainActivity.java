@@ -6,36 +6,52 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ListView;
+import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
+    private ListView listView;
+    private TextView header;
+    private DatabaseHelper databaseHelper;
+    private SQLiteDatabase db;
+    private Cursor userCursor;
+    private SimpleCursorAdapter simpleCursorAdapter;
+
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        header = findViewById(R.id.header);
+        listView = findViewById(R.id.list);
+
+        databaseHelper = new DatabaseHelper(getApplicationContext());
     }
 
-    public void onClick(View view) {
-        //Создание БД users
-        SQLiteDatabase db = getBaseContext().openOrCreateDatabase("app.db", MODE_PRIVATE, null);
-        // запрос к БД (назва таблицы users, столбцы name и age
-        db.execSQL("CREATE TABLE IF NOT EXISTS users (name TEXT, age INTEGER)");
-        //добавление данных в БД users
-        db.execSQL("INSERT INTO users VALUES ('Tom Smith', 23);");
-        db.execSQL("INSERT INTO users VALUES ('John Dou', 31);");
-        //получение данных из БД users, возвращает объект Cursor
-        Cursor cursor = db.rawQuery("SELECT * FROM users;", null);
-        TextView textView = findViewById(R.id.textView);
-        // метод для перехода к первому объекту в БД для проверка на наличие данных в БД
-        if (cursor.moveToFirst()) {
-            do {
-                String name = cursor.getString(0);
-                int age = cursor.getInt(1);
-                textView.append("Name " + name + " Age " + age + "\n");
-            } while (cursor.moveToNext());
-        }
-        cursor.close();
+    @Override
+    public void onResume() {
+        super.onResume();
+        //open connection
+        db = databaseHelper.getReadableDatabase();
+
+        // get data from DB in cursor values
+        userCursor = db.rawQuery("select * from " + DatabaseHelper.TABLE, null);
+        // set column will adding to ListView from Cursor
+        String[] headers = new String[]{DatabaseHelper.COLUMN_NAME, DatabaseHelper.COLUMN_YEAR};
+        // create adapter, pass the cursor to adapter
+        simpleCursorAdapter = new SimpleCursorAdapter(this, android.R.layout.two_line_list_item,
+                userCursor, headers, new int[]{android.R.id.text1, android.R.id.text2}, 0);
+        header.setText("Elements funded " + userCursor.getCount());
+        listView.setAdapter(simpleCursorAdapter);
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        //close all elements
+        userCursor.close();
         db.close();
     }
 }
